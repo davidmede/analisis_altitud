@@ -94,7 +94,6 @@ dbDisconnect(sioma) ### importante siempre desconectar
 # Union de consultas ------------------------------------------------------
 
 
-
 data_pbc_coord_lote<-rbind(lote_ren_coord_2017, 
                     lote_ren_coord_2018, 
                     lote_ren_coord_2019, 
@@ -104,52 +103,38 @@ data_pbc_coord_lote<-rbind(lote_ren_coord_2017,
 
 
 ## guardar datos para no volverlos a leer de la base de datos
-## write.csv(data_pbc_coord_lote, "./data/data_pbc_coord_lote.csv", row.names = F)
+write.csv(data_pbc_coord_lote, "./data/data_pbc_coord_lote.csv", row.names = F)
 
 ################################################################################
 ################################################################################
-
-
-
-## filtrado
-
-
-#cpha1<-filter(cpha, area.x !=0)
-#cpha1<-filter(cpha1, !is.na(area.x))
-#cpha1<-filter(cpha1, c_year!=1999)
-#cpha1<-filter(cpha1, sem!=53)
-
-#cajas_riego_area<-filter(cajas_riego_area, !(c_year==2018 & sem==01))
-
-
 
 
 # calculo del pbc por ha --------------------------------------------------
 
-
 data_pbc_coord_lote <- data_pbc_coord_lote %>% mutate(pbc_ha = pbc/area)
 
+# filtrado de datos no validos --------------------------------------------
 
+data_pbc_coord_lote <- data_pbc_coord_lote %>% 
+        filter(!is.na(area), c_year!=1999, sem!= 53, area !=0, !is.na(pbc),
+               !is.na(pbc))
 
-# filtardo de datos no validos --------------------------------------------
+# total por año y por lote ------------------------------------------------
 
+data_pbc_coord_lote2 <- data_pbc_coord_lote %>% group_by(lote_id, c_year) %>%
+        mutate(sum_pbc_ha=sum(pbc_ha)) %>% 
+        distinct(sum_pbc_ha, .keep_all=TRUE) %>% ungroup()
 
+# promedio anual por lote -------------------------------------------------
 
+data_pbc_coord_lote3 <- data_pbc_coord_lote2 %>% group_by(lote_id) %>%
+        mutate(mean_pbc_anual_ha=mean(sum_pbc_ha)) %>% 
+        distinct(mean_pbc_anual_ha, .keep_all=TRUE) %>% ungroup()
 
-# agrupacion por lote  ----------------------------------------------------
+# filtrado de lotes sin coordenadas ---------------------------------------
 
-
-
-data_pbc_coord_lote2 <- data_pbc_coord_lote %>% group_by(lote_id) %>%
-        mutate(mean_pbc=mean(pbc)) %>% 
-        distinct(mean_pbc, .keep_all=TRUE) %>% ungroup()
-
-
-
-
-
-
-write.csv(data_pbc_coord_lote2, "data_pbc_coord_lote2.csv")        
+data_pbc_coord_lote3 <- data_pbc_coord_lote3 %>% 
+        filter(!is.na(lat)|!is.na(lng))
 
 
 
