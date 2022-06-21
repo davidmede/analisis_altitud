@@ -145,7 +145,7 @@ write.csv(data_pbc_coord_lote3, "./data/puntos_lotes_rend.csv", row.names = F)
 ################################################################################
 
 
-# Lectura de datos con altura ---------------------------------------------
+# analisis de datos con altura ---------------------------------------------
 
 
 datos_altura<-read.csv("./data/altitud_lotes.csv")
@@ -156,14 +156,120 @@ boxplot(datos_altura2$mean_pbc_a)
 hist(datos_altura2$mean_pbc_a)
 
 
-
 plot(mean_pbc_a~id_altitud_ele, data = datos_altura2)
         
 plot(mean_pbc_a~lat, data = datos_altura2)
 
 plot(mean_pbc_a~lng, data = datos_altura2)
 
-        
+#### regresion cuadratica ######
+
+datos_altura2$id_altitud_ele2<-(datos_altura2$id_altitud_ele)^2
+
+aso_lm<-lm(mean_pbc_a~id_altitud_ele+id_altitud_ele2, data = datos_altura2)
+
+
+summary(aso_lm)
+
+fitted(lm(mean_pbc_a~id_altitud_ele+id_altitud_ele2, data = datos_altura2))
+
+psf_prom<-tapply(datos_altura2$mean_pbc_a, 
+                 datos_altura2$id_altitud_ele, mean)
+
+plot(mean_pbc_a~id_altitud_ele, data = datos_altura2)
+lines(psf_prom, 
+     fitted(lm(mean_pbc_a~id_altitud_ele+id_altitud_ele2, data = datos_altura2)))
+
+
+############################ regresion  gompertz #######################
+
+library(drc)
+###gompertz
+g_rend<-drm(mean_pbc_a ~ id_altitud_ele, fct = G.3(), data=datos_altura2)
+
+summary(g_rend)
+
+plot(g_rend)
+
+
+#####predicciom
+
+p_gmp<-function(mod=mod, ele=ele){
+        b<-coef(mod)
+        p_y<-b[2]*exp(-exp(b[1]*(ele-b[3])))
+        return(p_y)
+}
+
+
+rend_p<-p_gmp(mod = g_rend, ele = datos_altura2$id_altitud_ele)
+
+a<-cbind(datos_altura2$mean_pbc_a, 
+      p_gmp(mod = g_rend, ele = datos_altura2$id_altitud_ele))
+
+#### ajuste
+
+
+rmspd<-function(yo=yo,yp=yp) sqrt(sum((yp-yo)^2)/length(yo))
+
+rmspd(yo = datos_altura2$mean_pbc_a, yp = rend_p)
+
+r_2<-function(yo=yo,yp=yp){
+        r_2<-1-(sum((yo-yp)^2)/sum((yo-mean(yo))^2))
+        return(r_2)
+}
+r_2(datos_altura2$mean_pbc_a, rend_p) 
+
+
+
+############ validacion cruzada #################################
+
+
+muestra<-sample(1:54,5)
+val_fol<-rug_foliar[muestra,]
+ent_fol<-rug_foliar[-c(muestra),]
+
+g_rug_fol<-drm(p.psf~dia, fct = G.3(), data=ent_fol)
+summary(g_rug_fol)
+
+
+pred_gomp<-function(mod=mod, t=t){
+        b<-coef(mod)
+        py<-b[2]*exp(-exp(b[1]*(t-b[3])))
+        return(py)
+}
+
+yp<-pred_gomp(t=val_fol$dia,mod=g_rug_fol)
+
+rmspd<-function(yo=yo,yp=yp) sqrt(sum((yp-yo)^2)/length(yo))
+
+rmspd(val_fol$p.psf,yp)
+
+r_2<-function(yo=yo,yp=yp){
+        r_2<-1-(sum((yo-yp)^2)/sum((yo-mean(yo))^2))
+        return(r_2)
+}
+r_2(val_fol$p.psf,yp)
+
+r_2_adj<-function(r_2=r_2,n=n,p=p){
+        adj<-1-(1-r_2)*(n-1)/(n-p-1)
+        return(adj)
+}
+r_2_adj()  
+
+
+#### analisis de un modelo
+
+
+
+ 
+
+
+
+
+
+# analisis longitud -------------------------------------------------------
+
+
 
 
 # analisis altitud (todos los puntos) -------------------------------------
