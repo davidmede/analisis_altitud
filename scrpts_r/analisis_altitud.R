@@ -145,7 +145,7 @@ write.csv(data_pbc_coord_lote3, "./data/puntos_lotes_rend.csv", row.names = F)
 ################################################################################
 
 
-# analisis de datos con altura ---------------------------------------------
+# analisis de datos con altura para uraba ---------------------------------------------
 
 
 datos_altura<-read.csv("./data/altitud_lotes.csv")
@@ -158,30 +158,15 @@ hist(datos_altura2$mean_pbc_a)
 
 plot(mean_pbc_a~id_altitud_ele, data = datos_altura2)
         
-plot(mean_pbc_a~lat, data = datos_altura2)
 
-plot(mean_pbc_a~lng, data = datos_altura2)
-
-#### regresion cuadratica ######
+#### regresion cuadratica 
 
 datos_altura2$id_altitud_ele2<-(datos_altura2$id_altitud_ele)^2
 
 aso_lm<-lm(mean_pbc_a~id_altitud_ele+id_altitud_ele2, data = datos_altura2)
 
 
-summary(aso_lm)
-
-fitted(lm(mean_pbc_a~id_altitud_ele+id_altitud_ele2, data = datos_altura2))
-
-psf_prom<-tapply(datos_altura2$mean_pbc_a, 
-                 datos_altura2$id_altitud_ele, mean)
-
-plot(mean_pbc_a~id_altitud_ele, data = datos_altura2)
-lines(psf_prom, 
-     fitted(lm(mean_pbc_a~id_altitud_ele+id_altitud_ele2, data = datos_altura2)))
-
-
-############################ regresion  gompertz #######################
+############################ regresion  gompertz 
 
 library(drc)
 ###gompertz
@@ -204,7 +189,7 @@ p_gmp<-function(mod=mod, ele=ele){
 rend_p<-p_gmp(mod = g_rend, ele = datos_altura2$id_altitud_ele)
 
 a<-cbind(datos_altura2$mean_pbc_a, 
-      p_gmp(mod = g_rend, ele = datos_altura2$id_altitud_ele))
+         p_gmp(mod = g_rend, ele = datos_altura2$id_altitud_ele))
 
 #### ajuste
 
@@ -220,54 +205,45 @@ r_2<-function(yo=yo,yp=yp){
 r_2(datos_altura2$mean_pbc_a, rend_p) 
 
 
+########################################### analisis longitud #########################################
+mod_lat<-lm(mean_pbc_a~lat, data = datos_altura2)
+summary(mod_lat)
 
-############ validacion cruzada #################################
+datos_altura2$lng2<-(datos_altura2$lng)  ### opcion 2
 
-
-muestra<-sample(1:54,5)
-val_fol<-rug_foliar[muestra,]
-ent_fol<-rug_foliar[-c(muestra),]
-
-g_rug_fol<-drm(p.psf~dia, fct = G.3(), data=ent_fol)
-summary(g_rug_fol)
+mod_lng<-lm(mean_pbc_a~lng+I(lng^2)-1, data = datos_altura2)
+summary(mod_lng)
 
 
-pred_gomp<-function(mod=mod, t=t){
+p_cuad<-function(mod=mod, lng=lng){
         b<-coef(mod)
-        py<-b[2]*exp(-exp(b[1]*(t-b[3])))
-        return(py)
+        p_y<-b[1]*lng+b[2]*((lng)^2)-1
+        return(p_y)
 }
 
-yp<-pred_gomp(t=val_fol$dia,mod=g_rug_fol)
+lng_prom<-tapply(datos_altura2$lng, 
+                 datos_altura2$lng, mean)
 
-rmspd<-function(yo=yo,yp=yp) sqrt(sum((yp-yo)^2)/length(yo))
+len_est<-p_cuad(mod = mod_lng, lng = lng_prom)
 
-rmspd(val_fol$p.psf,yp)
-
-r_2<-function(yo=yo,yp=yp){
-        r_2<-1-(sum((yo-yp)^2)/sum((yo-mean(yo))^2))
-        return(r_2)
-}
-r_2(val_fol$p.psf,yp)
-
-r_2_adj<-function(r_2=r_2,n=n,p=p){
-        adj<-1-(1-r_2)*(n-1)/(n-p-1)
-        return(adj)
-}
-r_2_adj()  
+pred <- predict(mod_lng)
+ix <- sort(datos_altura2$lng, index.return=T)$ix
 
 
-#### analisis de un modelo
+plot(mean_pbc_a~lng, data = datos_altura2)
+lines(lng_prom, len_est, col="red", lwd=2)
+
+########################################### analisis latitud ##################
+
+mod_lat<-lm(mean_pbc_a~lat+I(lat^2)-1, data = datos_altura2)
+summary(mod_lat)
 
 
-
- 
+plot(mean_pbc_a~lat, data = datos_altura2)
+abline(mod_lat)
 
 
 
-
-
-# analisis longitud -------------------------------------------------------
 
 
 
@@ -278,6 +254,9 @@ datos_altura_todos<-read.csv("./data/altitud_lotes_todos.csv")
 
 datos_altura_todos2<-filter(datos_altura_todos, puntos_todos_id_ele < 500, 
                             mean_pbc_a <70000 )
+
+plot(mean_pbc_a~puntos_todos_id_ele, data = datos_altura_todos2)
+
 
 plot(mean_pbc_a~lat, data = datos_altura_todos2)
 plot(mean_pbc_a~lng, data = datos_altura_todos2)
