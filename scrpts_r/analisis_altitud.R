@@ -1,11 +1,14 @@
-setwd("D:/Sioma/Analisis/analisis_altitud")
 
 library(RMySQL)
 library(tidyverse)
-
+library(job)
 
 ###############################################################################
 ###############################################################################
+
+job::job({
+
+
 
 sioma<-dbConnect(MySQL(), user="sioma_david",
                  host="sioma-app.ciqflvd2anex.us-east-2.rds.amazonaws.com",
@@ -85,6 +88,13 @@ group by c_year, sem, v.lote_id;")
 
 dbDisconnect(sioma) ### importante siempre desconectar
 
+})
+
+
+# Union de consultas ------------------------------------------------------
+
+
+
 data_pbc_coord_lote<-rbind(lote_ren_coord_2017, 
                     lote_ren_coord_2018, 
                     lote_ren_coord_2019, 
@@ -94,25 +104,50 @@ data_pbc_coord_lote<-rbind(lote_ren_coord_2017,
 
 
 ## guardar datos para no volverlos a leer de la base de datos
-## write.csv(data_pbc_coord_lote, "data_pbc_coord_lote.csv", row.names = F)
+## write.csv(data_pbc_coord_lote, "./data/data_pbc_coord_lote.csv", row.names = F)
 
 ################################################################################
 ################################################################################
+
+
 
 ## filtrado
+
 
 #cpha1<-filter(cpha, area.x !=0)
 #cpha1<-filter(cpha1, !is.na(area.x))
 #cpha1<-filter(cpha1, c_year!=1999)
-#cajas_riego_area<-filter(cajas_riego_area, !(c_year==2018 & sem==01))
 #cpha1<-filter(cpha1, sem!=53)
 
-############################################################
+#cajas_riego_area<-filter(cajas_riego_area, !(c_year==2018 & sem==01))
 
 
-data_pbc_coord_lote2<- data_pbc_coord_lote %>% group_by(lote_id) %>%
+
+
+# calculo del pbc por ha --------------------------------------------------
+
+
+data_pbc_coord_lote <- data_pbc_coord_lote %>% mutate(pbc_ha = pbc/area)
+
+
+
+# filtardo de datos no validos --------------------------------------------
+
+
+
+
+# agrupacion por lote  ----------------------------------------------------
+
+
+
+data_pbc_coord_lote2 <- data_pbc_coord_lote %>% group_by(lote_id) %>%
         mutate(mean_pbc=mean(pbc)) %>% 
         distinct(mean_pbc, .keep_all=TRUE) %>% ungroup()
+
+
+
+
+
 
 write.csv(data_pbc_coord_lote2, "data_pbc_coord_lote2.csv")        
 
@@ -121,7 +156,11 @@ write.csv(data_pbc_coord_lote2, "data_pbc_coord_lote2.csv")
 ################################################################################
 ################################################################################
 
-datos_altura<-read.csv("altitud_lotes.csv")
+
+# Lectura de datos con altura ---------------------------------------------
+
+
+datos_altura<-read.csv("./data/altitud_lotes.csv")
 
 datos_altura2<-filter(datos_altura, ele<40)
 
