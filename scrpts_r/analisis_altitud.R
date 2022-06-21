@@ -137,6 +137,9 @@ data_pbc_coord_lote3 <- data_pbc_coord_lote3 %>%
         filter(!is.na(lat)|!is.na(lng))
 
 
+# creacion de archivo para añadirle la altitud ----------------------------
+
+write.csv(data_pbc_coord_lote3, "./data/puntos_lotes_rend.csv", row.names = F)
 
 ################################################################################
 ################################################################################
@@ -147,17 +150,31 @@ data_pbc_coord_lote3 <- data_pbc_coord_lote3 %>%
 
 datos_altura<-read.csv("./data/altitud_lotes.csv")
 
-datos_altura2<-filter(datos_altura, ele<40)
+datos_altura2<-filter(datos_altura, mean_pbc_a <70000)
 
-names(datos_altura)
+boxplot(datos_altura2$mean_pbc_a)
+hist(datos_altura2$mean_pbc_a)
 
-plot(mean_pbc~ele, data = datos_altura2)
+
+
+plot(mean_pbc_a~id_altitud_ele, data = datos_altura2)
+        
+plot(mean_pbc_a~lat, data = datos_altura2)
+
+plot(mean_pbc_a~lng, data = datos_altura2)
+
         
 
 
-        
+# analisis altitud (todos los puntos) -------------------------------------
 
+datos_altura_todos<-read.csv("./data/altitud_lotes_todos.csv")
 
+datos_altura_todos2<-filter(datos_altura_todos, puntos_todos_id_ele < 500, 
+                            mean_pbc_a <70000 )
+
+plot(mean_pbc_a~lat, data = datos_altura_todos2)
+plot(mean_pbc_a~lng, data = datos_altura_todos2)
 
 
 
