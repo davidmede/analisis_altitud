@@ -3,6 +3,7 @@ library(RMySQL)
 library(tidyverse)
 library(job)
 library(drc)
+library(gridExtra)
 
 ###############################################################################
 ###############################################################################
@@ -160,11 +161,65 @@ hist(datos_altura2$mean_pbc_a)
 plot(mean_pbc_a~id_altitud_ele, data = datos_altura2)
         
 
-#### regresion cuadratica ######
 
-datos_altura2$id_altitud_ele2<-(datos_altura2$id_altitud_ele)^2
+mod_ele<-lm(mean_pbc_a~poly(id_altitud_ele, 2), data = datos_altura2)
+summary(mod_ele)
 
-aso_lm<-lm(mean_pbc_a~id_altitud_ele+id_altitud_ele2, data = datos_altura2)
+
+library(ggpubr)
+
+
+a<-ggplot(datos_altura2, aes(x=id_altitud_ele, y=mean_pbc_a))+geom_point()+
+        geom_smooth(method = "lm", formula = y~poly(x,2))+
+        stat_regline_equation(label.y = 80000,
+                              aes(label =  paste(..eq.label.., ..adj.rr.label.., sep = "~~~~")),
+                              formula = y~poly(x,2)
+        )+
+        labs(title = "Relación entre la altitud y el PBC promedio \n por ha al año para los lotes estudiados en Urabá",
+             x="Altitud (msnm)", y="PBC promedio por ha al año (kg)")+
+        theme_bw()
+
+
+#### ensayo modelo generalizado
+
+
+mod_lg <- glm(mean_pbc_a ~ id_altitud_ele + I(id_altitud_ele^2), 
+              family = stats::gaussian("log"), data=datos_altura2)
+summary(mod_lg)
+
+
+pred<-function(mod=mod,p=p){
+        b<-coef(mod)
+        py<-exp(b[1]+b[2]*p+b[3]*p^2)
+        return(py)
+}
+
+y<-pred(mod=mod_lg,p=datos_altura2$id_altitud_ele)
+
+py<-tapply(y, datos_altura2$id_altitud_ele, mean)
+
+px<-tapply(datos_altura2$id_altitud_ele, 
+           datos_altura2$id_altitud_ele, mean)
+
+plot(datos_altura2$mean_pbc_a~datos_altura2$id_altitud_ele)
+lines(px,py)
+
+
+####RMSPD
+
+rmspd<-function(yo=yo,yp=yp) sqrt(sum((yp-yo)^2)/length(yo))
+
+####r2
+
+### modelo lineal generalizado
+rmspd(yo = datos_altura2$mean_pbc_a, yp = y)
+
+r_2<-function(yo=yo,yp=yp){
+        r_2<-1-(sum((yo-yp)^2)/sum((yo-mean(yo))^2))
+        return(r_2)
+}
+
+r_2(yo = datos_altura2$mean_pbc_a, yp = y) 
 
 
 ############################ regresion  gompertz ########
@@ -214,7 +269,7 @@ summary(mod_lng)
 library(ggpubr)
 
 
-ggplot(datos_altura2, aes(x=lng, y=mean_pbc_a))+geom_point()+
+c <- ggplot(datos_altura2, aes(x=lng, y=mean_pbc_a))+geom_point()+
         geom_smooth(method = "lm", formula = y~poly(x,3))+
         stat_regline_equation(label.y = 80000,
                 aes(label =  paste(..eq.label.., ..adj.rr.label.., sep = "~~~~")),
@@ -227,22 +282,27 @@ ggplot(datos_altura2, aes(x=lng, y=mean_pbc_a))+geom_point()+
 
 
 
-
+mod_lg<-glm(mean_pbc_a~lng, family = gaussian("log"), data=datos_altura2)
+summary(mod_lg)
 
 ########################################### analisis latitud ##################
 
-mod_lat<-lm(mean_pbc_a~lat+I(lat^2)-1, data = datos_altura2)
+mod_lat<-lm(mean_pbc_a~poly(lat, 2), data = datos_altura2)
 summary(mod_lat)
 
 
+library(ggpubr)
 
 
-plot(mean_pbc_a~lat, data = datos_altura2)
-
-
-
-
-
+d <- ggplot(datos_altura2, aes(x=lat, y=mean_pbc_a))+geom_point()+
+        geom_smooth(method = "lm", formula = y~poly(x,2))+
+        stat_regline_equation(label.y = 80000,
+                              aes(label =  paste(..eq.label.., ..adj.rr.label.., sep = "~~~~")),
+                              formula = y~poly(x,2)
+        )+
+        labs(title = "Relación entre la latitud y el PBC promedio \n por ha al año para los lotes estudiados en Urabá",
+             x="Latitud", y="PBC promedio por ha al año (kg)")+
+        theme_bw()
 
 
 
@@ -255,14 +315,34 @@ datos_altura_todos2<-filter(datos_altura_todos, puntos_todos_id_ele < 500,
 
 plot(mean_pbc_a~puntos_todos_id_ele, data = datos_altura_todos2)
 
-
-plot(mean_pbc_a~lat, data = datos_altura_todos2)
-plot(mean_pbc_a~lng, data = datos_altura_todos2)
+#####
 
 
+mod_ele2<-lm(mean_pbc_a~poly(puntos_todos_id_ele, 3), data = datos_altura_todos2)
+summary(mod_ele2)
 
 
+library(ggpubr)
 
 
+b<-ggplot(datos_altura_todos2, aes(x=puntos_todos_id_ele, y=mean_pbc_a))+
+        geom_point()+
+        geom_smooth(method = "lm", formula = y~poly(x,3))+
+        stat_regline_equation(label.y = 80000,
+                              aes(label =  paste(..eq.label.., ..adj.rr.label.., sep = "~~~~")),
+                              formula = y~poly(x,3)
+        )+
+        labs(title = "Relación entre la altitud y el PBC promedio \n por ha al año para los lotes estudiados en \n la base de datos de Sioma",
+             x="Altitud (msnm)", y="PBC promedio por ha al año (kg)")+
+        theme_bw()
 
+
+### graficos altitud
+
+grid.arrange(a,b, ncol=2)
+
+
+### graficos longitud y latitud
+
+grid.arrange(c,d, ncol=2)
 
