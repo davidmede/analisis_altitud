@@ -2,6 +2,7 @@
 library(RMySQL)
 library(tidyverse)
 library(job)
+library(drc)
 
 ###############################################################################
 ###############################################################################
@@ -159,14 +160,14 @@ hist(datos_altura2$mean_pbc_a)
 plot(mean_pbc_a~id_altitud_ele, data = datos_altura2)
         
 
-#### regresion cuadratica 
+#### regresion cuadratica ######
 
 datos_altura2$id_altitud_ele2<-(datos_altura2$id_altitud_ele)^2
 
 aso_lm<-lm(mean_pbc_a~id_altitud_ele+id_altitud_ele2, data = datos_altura2)
 
 
-############################ regresion  gompertz 
+############################ regresion  gompertz ########
 
 library(drc)
 ###gompertz
@@ -206,32 +207,27 @@ r_2(datos_altura2$mean_pbc_a, rend_p)
 
 
 ########################################### analisis longitud #########################################
-mod_lat<-lm(mean_pbc_a~lat, data = datos_altura2)
-summary(mod_lat)
-
-datos_altura2$lng2<-(datos_altura2$lng)  ### opcion 2
-
-mod_lng<-lm(mean_pbc_a~lng+I(lng^2)-1, data = datos_altura2)
+mod_lng<-lm(mean_pbc_a~poly(lng, 3), data = datos_altura2)
 summary(mod_lng)
 
 
-p_cuad<-function(mod=mod, lng=lng){
-        b<-coef(mod)
-        p_y<-b[1]*lng+b[2]*((lng)^2)-1
-        return(p_y)
-}
-
-lng_prom<-tapply(datos_altura2$lng, 
-                 datos_altura2$lng, mean)
-
-len_est<-p_cuad(mod = mod_lng, lng = lng_prom)
-
-pred <- predict(mod_lng)
-ix <- sort(datos_altura2$lng, index.return=T)$ix
+library(ggpubr)
 
 
-plot(mean_pbc_a~lng, data = datos_altura2)
-lines(lng_prom, len_est, col="red", lwd=2)
+ggplot(datos_altura2, aes(x=lng, y=mean_pbc_a))+geom_point()+
+        geom_smooth(method = "lm", formula = y~poly(x,3))+
+        stat_regline_equation(label.y = 80000,
+                aes(label =  paste(..eq.label.., ..adj.rr.label.., sep = "~~~~")),
+                formula = y~poly(x,3)
+        )+
+        labs(title = "Relación entre la longitud y el PBC promedio \n por ha al año para los lotes estudiados en Urabá",
+             x="Longitud", y="PBC promedio por ha al año (kg)")+
+        theme_bw()
+
+
+
+
+
 
 ########################################### analisis latitud ##################
 
@@ -239,8 +235,10 @@ mod_lat<-lm(mean_pbc_a~lat+I(lat^2)-1, data = datos_altura2)
 summary(mod_lat)
 
 
+
+
 plot(mean_pbc_a~lat, data = datos_altura2)
-abline(mod_lat)
+
 
 
 
